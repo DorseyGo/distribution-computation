@@ -1,0 +1,32 @@
+To enable HA features on NameNode.
+  |- to enable HA on NameNode, we create a redundancy NameNode, and use Active/Passive architure to implement this feature.
+  |- at any point of time, only one NameNode can be in Active mode, and another is in Standby mode.
+  |- need to setup a set of journal nodes to store the edit logs which are written only by Active NameNode
+  |- setup fencing method to avoid two are in Active mode situation due to network failure or otherwise.
+  |- setup zookeepers to handle automatic failover
+  
+To achieve these, desired configurations should be present:
+  |- redundancy NameNode
+    \-dfs.nameservice, gives a logical name for this cluster of NameNodes
+    \-dfs.ha.namenodes.<nameservice ID>, comma separated list of logical name of NameNodes
+    \-dfs.namenode.rpc-address.<nameservice ID>.<namenode, ID> for each kind of NameNodes, better using hostname
+    \-dfs.namenode.http-address.<nameservice ID>.<namenode, ID> for each NameNodes, IP or hostname are adopted
+  |- journal nodes for storing edit logs
+    \-dfs.namenode.shared.edits.dir, journal nodes where to store the edit logs
+    \-dfs.journalnode.edits.dir, local directory which hots the edit logs
+  |- fencing methods to secure only one Active NameNode is working
+    \-dfs.ha.fencing.methods, sshfence is commonly used
+    \-dfs.ha.fencing.ssh.private-key-files, using ssh key files to login remote machine without any password
+  |- zookeepers
+    \-ha.zookeeper.quorum, in core-site.xml for list of zookeeper to handle automatic failover
+    \-dfs.ha.automatic-failover.enabled, to enable automatic failover
+    \-dfs.client.failover.proxy.provider.<nameservice ID>, provider used to handle failover, which connect to Active Node.
+    
+    
+            +------------------+                   +--------------------+
+            | NameNode (Active)|  <------->        | NameNode (standby) |
+            +------------------+                   +--------------------+
+                    \\                                      ||
+            +-----------------+                    +--------------------+
+            | Journal Nodes   |                    | Journal nodes      |
+            +-----------------+                    +--------------------+      cluster of journal nodes to store edit logs
